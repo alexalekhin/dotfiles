@@ -58,3 +58,7 @@ eval "$(zoxide init zsh)"
 
 # Fzf
 [ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
+
+
+# Aliases
+alias suresetnwm='sudo systemctl restart NetworkManager; sudo systemctl restart systemd-resolved'
