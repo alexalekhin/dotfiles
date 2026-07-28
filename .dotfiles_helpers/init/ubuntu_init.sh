@@ -5,7 +5,8 @@
 # ============================================================
 set -euo pipefail
 
-DOTFILES="${DOTFILES:-$HOME/.dotfiles_cfg}"   # директория с твоими конфигами
+DOTFILES="${DOTFILES:-$HOME/.dotfiles_cfg}"
+export PATH="$HOME/.local/bin:$HOME/.cargo/bin:$PATH"
 
 log() { echo -e "\n\033[1;32m==>\033[0m $1"; }
 
@@ -56,21 +57,29 @@ pipx ensurepath
 pipx install gnome-extensions-cli --system-site-packages --force
 GEXT="$HOME/.local/bin/gext"
 
-"$GEXT" -F install 6307
+QUAKE_UUID="quake-terminal@diegodario88.github.io"
+"$GEXT" -F install "$QUAKE_UUID"
 
-QUAKE_UUID="$(gnome-extensions list -a | grep -i '^quake-terminal' || true)"
-if [ -n "$QUAKE_UUID" ]; then
-    gnome-extensions enable "$QUAKE_UUID"
+EXT_DIR="$HOME/.local/share/gnome-shell/extensions/$QUAKE_UUID"
+if [ -d "$EXT_DIR" ]; then
+    glib-compile-schemas "$EXT_DIR/schemas" 2>/dev/null || true
+
+    gsettings set org.gnome.shell disable-user-extensions false
+    ENABLED="$(gsettings get org.gnome.shell enabled-extensions)"
+    case "$ENABLED" in
+        *"$QUAKE_UUID"*) ;;
+        "@as []"|"[]") gsettings set org.gnome.shell enabled-extensions "['$QUAKE_UUID']" ;;
+        *) gsettings set org.gnome.shell enabled-extensions "${ENABLED%]*}, '$QUAKE_UUID']" ;;
+    esac
 
     QUAKE_SCHEMA="org.gnome.shell.extensions.quake-terminal"
-    QUAKE_SHORTCUT_KEY="$(gsettings list-keys "$QUAKE_SCHEMA" 2>/dev/null | grep -iE 'shortcut|keybind' | head -n1)"
-    if [ -n "$QUAKE_SHORTCUT_KEY" ]; then
-        gsettings set "$QUAKE_SCHEMA" "$QUAKE_SHORTCUT_KEY" "['F12']"
-    else
-        echo "Не нашёл ключ шортката в схеме $QUAKE_SCHEMA — задай F12 вручную в настройках расширения (gext preferences $QUAKE_UUID)"
-    fi
+    SHORTCUT_KEY="$(gsettings --schemadir "$EXT_DIR/schemas" list-keys "$QUAKE_SCHEMA" | grep -iE 'shortcut|keybind' | head -n1)"
+    [ -n "$SHORTCUT_KEY" ] && gsettings --schemadir "$EXT_DIR/schemas" set "$QUAKE_SCHEMA" "$SHORTCUT_KEY" "['F12']"
+
+    TERM_KEY="$(gsettings --schemadir "$EXT_DIR/schemas" list-keys "$QUAKE_SCHEMA" | grep -iE '^terminal-id$|app-id' | head -n1)"
+    [ -n "$TERM_KEY" ] && gsettings --schemadir "$EXT_DIR/schemas" set "$QUAKE_SCHEMA" "$TERM_KEY" "kitty.desktop"
 else
-    echo "Quake Terminal не установился/не нашёлся в gnome-extensions list — проверь вручную: $GEXT install --filesystem 6307"
+    echo "Quake Terminal не установился — проверь вручную: $GEXT -F install $QUAKE_UUID"
 fi
 
 # 2.2 Install Kitty
@@ -109,18 +118,21 @@ mkdir -p "$HOME/.config"
 # 3.1 Prepare Rust/cargo
 log "3.1 Prepare Rust/cargo"
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --no-modify-path
-curl -L --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install-from-binstall-release.sh | bash
 
 # shellcheck disable=SC1091
 source "$HOME/.cargo/env"
 
+curl -L --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install-from-binstall-release.sh | bash
+
 # 3.2 Install yazi and dependencies
 log "3.2 Install yazi and dependencies"
+sudo apt install -y pkg-config
 sudo apt install -y ffmpeg poppler-utils unar file jq
 sudo apt install -y 7zip
 cargo binstall -y ripgrep fd-find bat zoxide
 cargo binstall -y resvg
-cargo binstall -y yazi-fm yazi-cli
+rm -rf /tmp/cargo-install* /tmp/yazi-build-*
+cargo install --force yazi-build
 
 # 3.3 Install neovim
 log "3.3 Install neovim"
