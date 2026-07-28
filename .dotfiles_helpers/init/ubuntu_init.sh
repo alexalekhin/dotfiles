@@ -73,16 +73,22 @@ if [ -d "$EXT_DIR" ]; then
     esac
 
     QUAKE_SCHEMA="org.gnome.shell.extensions.quake-terminal"
-    qset() { gsettings --schemadir "$EXT_DIR/schemas" set "$QUAKE_SCHEMA" "$@"; }
+    qset() {
+        gsettings --schemadir "$EXT_DIR/schemas" set "$QUAKE_SCHEMA" "$@" \
+            || echo "  quake-terminal: не удалось задать $1"
+    }
 
-    SHORTCUT_KEY="$(gsettings --schemadir "$EXT_DIR/schemas" list-keys "$QUAKE_SCHEMA" | grep -iE 'shortcut|keybind' | head -n1)"
-    [ -n "$SHORTCUT_KEY" ] && qset "$SHORTCUT_KEY" "['F12']"
-
-    TERM_KEY="$(gsettings --schemadir "$EXT_DIR/schemas" list-keys "$QUAKE_SCHEMA" | grep -iE '^terminal-id$|app-id' | head -n1)"
-    [ -n "$TERM_KEY" ] && qset "$TERM_KEY" "kitty.desktop"
-
+    qset terminal-shortcut "['F12']"
+    qset terminal-id "kitty.desktop"
     qset vertical-size 100
     qset horizontal-size 100
+    qset animation-time 200
+    qset always-on-top true
+    qset auto-hide-window true
+    qset skip-taskbar true
+    qset render-on-current-monitor true
+
+    echo "  quake-terminal: настройки применены, вступят в силу после перелогина"
 else
     echo "Quake Terminal не установился — проверь вручную: $GEXT -F install $QUAKE_UUID"
 fi
