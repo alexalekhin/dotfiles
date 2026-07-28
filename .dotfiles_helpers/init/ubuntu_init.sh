@@ -109,7 +109,7 @@ mkdir -p "$HOME/.config"
 [ -f "$DOTFILES/.zshenv" ]     && ln -sf "$DOTFILES/.zshenv" "$HOME/.zshenv"
 [ -d "$DOTFILES/kitty" ]       && ln -sf "$DOTFILES/kitty" "$HOME/.config/kitty"
 [ -d "$DOTFILES/nvim" ]        && ln -sf "$DOTFILES/nvim" "$HOME/.config/nvim"
-[ -d "$DOTFILES/yazi" ]        && ln -sf "$DOTFILES/yazi" "$HOME/.config/yazi"
+# [ -d "$DOTFILES/yazi" ]        && ln -sf "$DOTFILES/yazi" "$HOME/.config/yazi"
 
 # ------------------------------------------------------------
 # 3. Prepare utilities
