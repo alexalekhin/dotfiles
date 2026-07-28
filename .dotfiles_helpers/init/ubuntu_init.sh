@@ -110,11 +110,23 @@ fc-cache -f
 # 2.4 Set required symlinks
 log "2.4 Set required symlinks"
 mkdir -p "$HOME/.config"
-[ -f "$DOTFILES/.zshrc" ]      && ln -sf "$DOTFILES/.zshrc" "$HOME/.zshrc"
-[ -f "$DOTFILES/.zshenv" ]     && ln -sf "$DOTFILES/.zshenv" "$HOME/.zshenv"
-[ -d "$DOTFILES/kitty" ]       && ln -sf "$DOTFILES/kitty" "$HOME/.config/kitty"
-[ -d "$DOTFILES/nvim" ]        && ln -sf "$DOTFILES/nvim" "$HOME/.config/nvim"
-# [ -d "$DOTFILES/yazi" ]        && ln -sf "$DOTFILES/yazi" "$HOME/.config/yazi"
+
+link() {
+    local src="$1" dst="$2"
+    [ -e "$src" ] || return 0
+    if [ -L "$dst" ]; then
+        rm -f "$dst"
+    elif [ -e "$dst" ]; then
+        mv "$dst" "$dst.bak.$(date +%s)"
+    fi
+    ln -sfn "$src" "$dst"
+}
+
+link "$DOTFILES/.zshrc"  "$HOME/.zshrc"
+link "$DOTFILES/.zshenv" "$HOME/.zshenv"
+link "$DOTFILES/kitty"   "$HOME/.config/kitty"
+link "$DOTFILES/nvim"    "$HOME/.config/nvim"
+link "$DOTFILES/yazi"    "$HOME/.config/yazi"
 
 # ------------------------------------------------------------
 # 3. Prepare utilities
