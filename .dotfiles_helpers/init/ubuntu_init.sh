@@ -1,14 +1,29 @@
 #!/usr/bin/env bash
 # ============================================================
 #  Ubuntu First Install — Dotfiles Bootstrap
-#  Usage: chmod +x bootstrap.sh && ./bootstrap.sh
+#  Usage: chmod +x ubuntu_init.sh && ./ubuntu_init.sh
 # ============================================================
 set -euo pipefail
+
+if [ "$(id -u)" -eq 0 ]; then
+    echo "Не запускай под root — конфиги и rustup уедут в /root."
+    exit 1
+fi
 
 DOTFILES="${DOTFILES:-$HOME/.dotfiles_cfg}"
 export PATH="$HOME/.local/bin:$HOME/.cargo/bin:$PATH"
 
 log() { echo -e "\n\033[1;32m==>\033[0m $1"; }
+
+# First password enter
+sudo -v
+while true; do
+    sudo -n true
+    sleep 60
+    kill -0 "$$" 2>/dev/null || exit
+done 2>/dev/null &
+SUDO_KEEPALIVE_PID=$!
+trap 'kill "$SUDO_KEEPALIVE_PID" 2>/dev/null || true' EXIT
 
 # ------------------------------------------------------------
 # 0. Apt update + upgrade
@@ -53,8 +68,10 @@ sudo apt install -y fzf
 # 2.1 Install gnome-extensions
 log "2.1 Install gnome-extensions"
 sudo apt install -y gnome-shell-extensions gnome-shell-extension-manager gnome-browser-connector pipx
+
 pipx ensurepath
 pipx install gnome-extensions-cli --system-site-packages --force
+
 GEXT="$HOME/.local/bin/gext"
 
 QUAKE_UUID="quake-terminal@diegodario88.github.io"
@@ -95,17 +112,22 @@ fi
 
 # 2.2 Install Kitty
 log "2.2 Install Kitty"
+
 curl -L https://sw.kovidgoyal.net/kitty/installer.sh | sh /dev/stdin
+
 mkdir -p "$HOME/.local/bin" "$HOME/.local/share/applications"
 ln -sf "$HOME/.local/kitty.app/bin/kitty" "$HOME/.local/bin/kitty"
 ln -sf "$HOME/.local/kitty.app/bin/kitten" "$HOME/.local/bin/kitten"
+
 cp "$HOME/.local/kitty.app/share/applications/kitty.desktop" "$HOME/.local/share/applications/"
 cp "$HOME/.local/kitty.app/share/applications/kitty-open.desktop" "$HOME/.local/share/applications/"
+
 sed -i "s|Icon=kitty|Icon=$HOME/.local/kitty.app/share/icons/hicolor/256x256/apps/kitty.png|g" "$HOME/.local/share/applications/kitty"*.desktop
 sed -i "s|Exec=kitty|Exec=$HOME/.local/kitty.app/bin/kitty|g" "$HOME/.local/share/applications/kitty"*.desktop
 
 # 2.3 Install nerd font
 log "2.3 Install nerd font"
+
 mkdir -p "$HOME/.local/share/fonts"
 tmpdir="$(mktemp -d)"
 curl -fLo "$tmpdir/JetBrainsMono.zip" https://github.com/ryanoasis/nerd-fonts/releases/latest/download/JetBrainsMono.zip
@@ -149,16 +171,20 @@ curl -L --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/cargo-
 
 # 3.2 Install yazi and dependencies
 log "3.2 Install yazi and dependencies"
+
 sudo apt install -y pkg-config
 sudo apt install -y ffmpeg poppler-utils unar file jq
 sudo apt install -y 7zip
+
 cargo binstall -y ripgrep fd-find bat zoxide
 cargo binstall -y resvg
+
 rm -rf /tmp/cargo-install* /tmp/yazi-build-*
 cargo install --force yazi-build
 
 # 3.3 Install neovim
 log "3.3 Install neovim"
+
 sudo add-apt-repository -y ppa:neovim-ppa/unstable
 sudo apt update
 sudo apt install -y neovim
@@ -169,16 +195,21 @@ sudo apt install -y vlc
 
 # 3.5 Install eza + replace ls with eza
 log "3.5 Install eza + replace ls with eza"
+
 sudo mkdir -p /etc/apt/keyrings
 if [ ! -f /etc/apt/keyrings/gierens.gpg ]; then
     wget -qO- https://raw.githubusercontent.com/eza-community/eza/main/deb.asc \
         | sudo gpg --dearmor -o /etc/apt/keyrings/gierens.gpg
 fi
+
 echo "deb [signed-by=/etc/apt/keyrings/gierens.gpg] http://deb.gierens.de stable main" \
     | sudo tee /etc/apt/sources.list.d/gierens.list
+
 sudo chmod 644 /etc/apt/keyrings/gierens.gpg /etc/apt/sources.list.d/gierens.list
+
 sudo apt update
 sudo apt install -y eza
+
 # алиасы (пропиши в .zshrc дотфайлов):
 #   alias ls='eza --icons --group-directories-first'
 #   alias ll='eza -l --icons --group-directories-first'
@@ -189,12 +220,15 @@ sudo apt install -y eza
 # 4. Prepare core GUI utilities
 # ------------------------------------------------------------
 
+# Prepare libfuse
+sudo apt install -y libfuse2t64 2>/dev/null || sudo apt install -y libfuse2
+
 # 4.1 Install Zen browser
 log "4.1 Install Zen browser"
-# Ubuntu 24.04+ uses libfuse2t64 (libfuse2 for 22.04)
-sudo apt install -y libfuse2t64 2>/dev/null || sudo apt install -y libfuse2
+
 curl -fsSL https://updates.zen-browser.app/appimage.sh -o /tmp/zen-install.sh
-bash /tmp/zen-install.sh
+printf '1\n' | bash /tmp/zen-install.sh
+
 rm -f /tmp/zen-install.sh
 
 # 4.2 Install Obsidian (AppImage)
@@ -211,16 +245,10 @@ rm -rf "$tmpdir"
 # 4.3 Install brave
 log "4.3 Install brave"
 curl -fsS https://dl.brave.com/install.sh | sh
-# Ubuntu 24.04+ uses libfuse2t64 (libfuse2 for 22.04)
-sudo apt install -y libfuse2t64 2>/dev/null || sudo apt install -y libfuse2
-# Ubuntu 24.04+ uses libfuse2t64 (libfuse2 for 22.04)
-sudo apt install -y libfuse2t64 2>/dev/null || sudo apt install -y libfuse2
-# Ubuntu 24.04+ uses libfuse2t64 (libfuse2 for 22.04)
-sudo apt install -y libfuse2t64 2>/dev/null || sudo apt install -y libfuse2
 
 # 4.4 Install telegram
 log "4.4 Install telegram"
-sudo apt install -y telegram-desktop
+snap install telegram-desktop
 
 # ------------------------------------------------------------
 # 5. Prepare Dev tools
@@ -234,4 +262,22 @@ sudo snap install android-studio --classic
 log "5.2 Setup claude + claude code"
 curl -fsSL https://claude.ai/install.sh | bash
 
-log "Готово. Перелогинься (или перезагрузись), чтобы применились: zsh как shell по умолчанию, шрифты, PATH от cargo/npm."
+sudo curl -fsSLo /usr/share/keyrings/claude-desktop-archive-keyring.asc \
+    https://downloads.claude.ai/claude-desktop/key.asc
+echo "deb [arch=amd64,arm64 signed-by=/usr/share/keyrings/claude-desktop-archive-keyring.asc] https://downloads.claude.ai/claude-desktop/apt/stable stable main" \
+    | sudo tee /etc/apt/sources.list.d/claude-desktop.list
+sudo apt update
+sudo apt install -y claude-desktop
+
+# 5.3 Restart
+log "Готово. Требуется перезагрузка: zsh как shell по умолчанию, шрифты, PATH от cargo, расширение GNOME."
+
+if [ -t 0 ]; then
+    read -r -t 15 -p "Перезагрузить сейчас? [Y/n] (15с, по умолчанию да) " ans || true
+    case "${ans:-y}" in
+        [Nn]*) echo "Отменено — перезагрузите вручную: sudo reboot" ;;
+        *) echo "Перезагрузка..."; sleep 2; sudo reboot ;;
+    esac
+else
+    echo "Неинтерактивный запуск — перезагрузите вручную: sudo reboot"
+fi
