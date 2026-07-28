@@ -156,7 +156,9 @@ sudo apt install -y eza
 
 # 4.1 Install Zen browser
 log "4.1 Install Zen browser"
-curl -fsSL https://updates.zen-browser.app/appimage.sh | sh
+curl -fsSL https://updates.zen-browser.app/appimage.sh -o /tmp/zen-install.sh
+bash /tmp/zen-install.sh
+rm -f /tmp/zen-install.sh
 
 # 4.2 Install Obsidian (AppImage)
 log "4.2 Install Obsidian"
