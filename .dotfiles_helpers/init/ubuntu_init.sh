@@ -56,7 +56,7 @@ pipx ensurepath
 pipx install gnome-extensions-cli --system-site-packages --force
 GEXT="$HOME/.local/bin/gext"
 
-"$GEXT" install --filesystem 6307
+"$GEXT" -F install 6307
 
 QUAKE_UUID="$(gnome-extensions list -a | grep -i '^quake-terminal' || true)"
 if [ -n "$QUAKE_UUID" ]; then
@@ -109,14 +109,18 @@ mkdir -p "$HOME/.config"
 # 3.1 Prepare Rust/cargo
 log "3.1 Prepare Rust/cargo"
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --no-modify-path
+curl -L --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install-from-binstall-release.sh | bash
+
 # shellcheck disable=SC1091
 source "$HOME/.cargo/env"
 
 # 3.2 Install yazi and dependencies
 log "3.2 Install yazi and dependencies"
-cargo install --locked ripgrep fd-find bat zoxide
-sudo apt install -y ffmpeg p7zip-full jq poppler-utils imagemagick unar
-cargo install --locked yazi-fm yazi-cli
+sudo apt install -y ffmpeg poppler-utils unar file jq
+sudo apt install -y 7zip
+cargo binstall -y ripgrep fd-find bat zoxide
+cargo binstall -y resvg
+cargo binstall -y yazi-fm yazi-cli
 
 # 3.3 Install neovim
 log "3.3 Install neovim"
