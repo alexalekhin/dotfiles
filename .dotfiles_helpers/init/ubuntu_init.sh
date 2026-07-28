@@ -73,11 +73,16 @@ if [ -d "$EXT_DIR" ]; then
     esac
 
     QUAKE_SCHEMA="org.gnome.shell.extensions.quake-terminal"
+    qset() { gsettings --schemadir "$EXT_DIR/schemas" set "$QUAKE_SCHEMA" "$@"; }
+
     SHORTCUT_KEY="$(gsettings --schemadir "$EXT_DIR/schemas" list-keys "$QUAKE_SCHEMA" | grep -iE 'shortcut|keybind' | head -n1)"
-    [ -n "$SHORTCUT_KEY" ] && gsettings --schemadir "$EXT_DIR/schemas" set "$QUAKE_SCHEMA" "$SHORTCUT_KEY" "['F12']"
+    [ -n "$SHORTCUT_KEY" ] && qset "$SHORTCUT_KEY" "['F12']"
 
     TERM_KEY="$(gsettings --schemadir "$EXT_DIR/schemas" list-keys "$QUAKE_SCHEMA" | grep -iE '^terminal-id$|app-id' | head -n1)"
-    [ -n "$TERM_KEY" ] && gsettings --schemadir "$EXT_DIR/schemas" set "$QUAKE_SCHEMA" "$TERM_KEY" "kitty.desktop"
+    [ -n "$TERM_KEY" ] && qset "$TERM_KEY" "kitty.desktop"
+
+    qset vertical-size 100
+    qset horizontal-size 100
 else
     echo "Quake Terminal не установился — проверь вручную: $GEXT -F install $QUAKE_UUID"
 fi
@@ -168,43 +173,32 @@ sudo apt install -y eza
 
 # 4.1 Install Zen browser
 log "4.1 Install Zen browser"
+# Ubuntu 24.04+ uses libfuse2t64 (libfuse2 for 22.04)
+sudo apt install -y libfuse2t64 2>/dev/null || sudo apt install -y libfuse2
 curl -fsSL https://updates.zen-browser.app/appimage.sh -o /tmp/zen-install.sh
 bash /tmp/zen-install.sh
 rm -f /tmp/zen-install.sh
 
 # 4.2 Install Obsidian (AppImage)
 log "4.2 Install Obsidian"
-# Ubuntu 24.04+ uses libfuse2t64 (libfuse2 for 22.04)
-sudo apt install -y libfuse2t64 2>/dev/null || sudo apt install -y libfuse2
 
-mkdir -p "$HOME/Applications" "$HOME/.local/share/applications" "$HOME/.local/share/icons"
+tmpdir="$(mktemp -d)"
 OBSIDIAN_URL="$(curl -s https://api.github.com/repos/obsidianmd/obsidian-releases/releases/latest \
-    | grep "browser_download_url.*\.AppImage" \
-    | grep -v "arm64" \
+    | grep "browser_download_url.*amd64\.deb" \
     | cut -d '"' -f 4)"
-curl -fL --progress-bar "$OBSIDIAN_URL" -o "$HOME/Applications/Obsidian.AppImage"
-chmod u+x "$HOME/Applications/Obsidian.AppImage"
-
-# set icon
-( cd "$HOME/Applications" \
-    && ./Obsidian.AppImage --appimage-extract 'usr/share/icons/hicolor/512x512/apps/obsidian.png' >/dev/null 2>&1 \
-    && cp squashfs-root/usr/share/icons/hicolor/512x512/apps/obsidian.png "$HOME/.local/share/icons/obsidian.png" \
-    && rm -rf squashfs-root ) || true
-
-cat > "$HOME/.local/share/applications/obsidian.desktop" <<EOF
-[Desktop Entry]
-Name=Obsidian
-Exec=$HOME/Applications/Obsidian.AppImage %u
-Terminal=false
-Type=Application
-Icon=$HOME/.local/share/icons/obsidian.png
-Categories=Office;Utility;
-MimeType=x-scheme-handler/obsidian;
-EOF
+curl -fL --progress-bar "$OBSIDIAN_URL" -o "$tmpdir/obsidian.deb"
+sudo apt install -y "$tmpdir/obsidian.deb"
+rm -rf "$tmpdir"
 
 # 4.3 Install brave
 log "4.3 Install brave"
 curl -fsS https://dl.brave.com/install.sh | sh
+# Ubuntu 24.04+ uses libfuse2t64 (libfuse2 for 22.04)
+sudo apt install -y libfuse2t64 2>/dev/null || sudo apt install -y libfuse2
+# Ubuntu 24.04+ uses libfuse2t64 (libfuse2 for 22.04)
+sudo apt install -y libfuse2t64 2>/dev/null || sudo apt install -y libfuse2
+# Ubuntu 24.04+ uses libfuse2t64 (libfuse2 for 22.04)
+sudo apt install -y libfuse2t64 2>/dev/null || sudo apt install -y libfuse2
 
 # 4.4 Install telegram
 log "4.4 Install telegram"
